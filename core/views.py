@@ -5,10 +5,13 @@ from core.models import Evento
 from django.contrib import messages
 # Create your views here.
 
+
 def data_eventos(request,titulo):
     object = Evento.objects.get(titulo)
     print("Object" + object)
     return HttpResponse('<h1>Data do evento: {}.</h1>'.format(object.data_evento))
+
+
 
 @login_required(login_url='/login/')
 def lista_eventos(request):
@@ -18,6 +21,8 @@ def lista_eventos(request):
     dados = {'eventos':evento}
     return render(request, 'agenda.html', dados)
 
+
+
 @login_required(login_url='/login/')
 def submit_evento(request):
     if request.POST:
@@ -25,22 +30,48 @@ def submit_evento(request):
         data_evento = request.POST.get('data_evento')
         descricao = request.POST.get('descricao')
         usuario = request.user
-        Evento.objects.create(titulo=titulo,
-                              data_evento=data_evento, 
-                              descricao=descricao, 
-                              usuario=usuario)
+        id_evento = request.POST.get("id_evento")
+        if id_evento:
+            evento = Evento.objects.get(id=id_evento)
+            if usuario == evento.usuario:
+                Evento.objects.filter(id=id_evento).update(titulo=titulo,
+                                                           data_evento=data_evento, 
+                                                           descricao=descricao)
+            # Outra forma de fazer:
+            # evento.titulo = titulo
+            # evento.descricao = descricao
+            # evento.data_evento = data_evento
+            # evento.save()
+        else:
+            Evento.objects.create(titulo=titulo,
+                                  data_evento=data_evento, 
+                                  descricao=descricao, 
+                                  usuario=usuario)
     return redirect('/')
+
+
 
 @login_required(login_url='/login/')
 def evento(request):
-    return render(request, 'evento.html')
+    id_evento = request.GET.get('id')
+    dados = {}
+    if id_evento:
+        dados['evento'] = Evento.objects.get(id=id_evento)
+    return render(request, 'evento.html', dados)
+
+
 
 # def index(request):
 #     return redirect('/agenda/')
 
+
+
 def login_user(request):
     return render(request, 'login.html')
 
+
+
+@login_required(login_url='/login/')
 def submit_login(request):
     if request.POST:
         username = request.POST.get('username')
@@ -53,7 +84,15 @@ def submit_login(request):
             messages.error(request, "Usuário ou senha inválido!")
     return redirect('/')
 
+
+@login_required(login_url='/login/')
+def delete_evento(request, id_evento):
+    usuario = request.user    
+    evento = Evento.objects.get(id=id_evento)
+    if usuario == evento.usuario:
+        evento.delete()
+    return redirect('/')
+
 def logout_user(request):
     logout(request)
     return redirect('/')
-
